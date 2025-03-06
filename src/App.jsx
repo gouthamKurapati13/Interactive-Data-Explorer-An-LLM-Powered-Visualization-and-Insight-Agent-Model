@@ -1,5 +1,6 @@
-import * as React from 'react';
-import * as d3 from "d3"
+import React, { useState } from 'react';
+import { SketchPicker } from 'react-color';
+import * as d3 from "d3";
 import { styled } from '@mui/material/styles';
 import {
     Experimental_CssVarsProvider as CssVarsProvider,
@@ -27,12 +28,12 @@ import ButtonGroup from '@mui/material/ButtonGroup';
 import GitHubSvg from './github.svg';
 
 import Dashboard from "./components/Dashboard"
+import FileUpload from "./components/FileUpload"
 
 import "./styles.css"
 
 import { useChartsContext } from "./providers/ChartsProvider"
 import { useDataContext, chartsAvailable, fieldsAvailable, summarizationAvailable } from "./providers/DataProvider"
-
 
 const drawerWidth = 240;
 
@@ -81,39 +82,20 @@ const DrawerHeader = styled('div')(({ theme }) => ({
     justifyContent: 'flex-start',
 }));
 
-const getRandomColor = () => {
-    let h = Math.floor(Math.random() * 360)
-    let s = Math.floor(Math.random() * (100 - 80 + 1) + 80)
-    let l = Math.floor(Math.random() * (60 - 40 + 1) + 40)
-    let color = `hsl(${h},${s}%,${l}%)`
-    let complementaryColor = `hsl(${h + 180},${s}%,${l}%)`
-    return { color, complementaryColor }
-}
-
-const getFixColor = () => {
-    let h = 210
-    let s = 90
-    let l = 50
-    let color = `hsl(${h},${s}%,${l}%)`
-    let complementaryColor = `hsl(${h + 180},${s}%,${l}%)`
-    return { color, complementaryColor }
-}
-
 const getThemeExtender = (color) => {
     const theme = extendTheme({
         colorSchemes: {
             light: {
                 palette: {
                     primary: {
-                        main: color.color,
-                        complementaryColor: color.complementaryColor,
+                        main: color,
                         contrastText: "#f8f9fa",
                     },
                     background: {
                         default: "#eceff1",
                         primary: "#eceff1",
                     },
-                    divider: color.color,
+                    divider: color,
                 },
             }
         }
@@ -122,26 +104,21 @@ const getThemeExtender = (color) => {
     return theme
 }
 
-
 const App = (props) => {
     const { charts, addChart, replaceChart, removeChart, removeLastChart, updateChart } = useChartsContext()
     const { setChosenChartIndex } = useDataContext()
-    const [theme, setTheme] = React.useState(getThemeExtender(getFixColor()))
+    const [theme, setTheme] = useState(getThemeExtender('#2196f3'))
+    const [colorPickerVisible, setColorPickerVisible] = useState(false)
+    const [selectedColor, setSelectedColor] = useState('#2196f3')
 
-    const handleThemeChange = () => {
-        let resizeTimer
-        document.body.classList.add("resize-animation-stopper")
-        clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(() => {
-            document.body.classList.remove("resize-animation-stopper")
-        }, 300)
-
-        setTheme(getThemeExtender(getRandomColor()))
+    const handleThemeChange = (color) => {
+        setSelectedColor(color.hex)
+        setTheme(getThemeExtender(color.hex))
     }
 
-    const [open, setOpen] = React.useState(false)
-    const [selectedChartIndex, setSelectedChartIndex] = React.useState(null)
-    const [selectedChartType, setSelectedChartType] = React.useState(null)
+    const [open, setOpen] = useState(false)
+    const [selectedChartIndex, setSelectedChartIndex] = useState(null)
+    const [selectedChartType, setSelectedChartType] = useState(null)
 
     const handleDrawerOpen = (chart, index) => {
         setSelectedChartType(chart.type)
@@ -178,19 +155,15 @@ const App = (props) => {
                 <AppBar position="fixed" open={open} style={{ backgroundColor: open ? "#D0D2D4" : null }}>
                     <Toolbar className="close_me">
                         <Typography className="close_me" variant="h6" noWrap sx={{ flexGrow: 1 }} component="div" style={{ color: open && "mode" === "dark" ? '#8B8E91' : '' }}>
-                            D3 Dashboard
+                            LLM Dashboard Builder
                         </Typography>
                         <Box sx={{ flexGrow: 1 }} />
-                        <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
-                            <a href="https://github.com/renaudjmathieu/data-visualization-d3-react" target="_blank" className='imgLink' rel="noreferrer" aria-label="GitHub">
-                                <GitHubSvg className='headerSvg' alt="GitHub logo" />
-                            </a>
-                        </Box>
                     </Toolbar>
                 </AppBar>
                 <Main open={open}>
                     <DrawerHeader className="close_me" />
                     <Box sx={{ flexGrow: 1 }} className="close_me">
+                        <FileUpload />
                         <Grid container spacing={2} className="containerOnDesktop">
                             <Grid xs={8} className="gridOnDesktop__left close_me">
                                 <ButtonGroup variant="contained" aria-label="outlined primary button group" className="close_me">
@@ -200,11 +173,17 @@ const App = (props) => {
                             </Grid>
                             <Grid xs={4} className="gridOnDesktop__right close_me" justifyContent="right" alignItems="right">
                                 <div className="textright close_me">
-                                    <Button
-                                        onClick={handleThemeChange}
-                                    >
+                                    <Button onClick={() => setColorPickerVisible(!colorPickerVisible)}>
                                         Change theme color
                                     </Button>
+                                    {colorPickerVisible && (
+                                        <div style={{ position: 'absolute', zIndex: 2 }}>
+                                            <SketchPicker
+                                                color={selectedColor}
+                                                onChangeComplete={handleThemeChange}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </Grid>
                         </Grid>

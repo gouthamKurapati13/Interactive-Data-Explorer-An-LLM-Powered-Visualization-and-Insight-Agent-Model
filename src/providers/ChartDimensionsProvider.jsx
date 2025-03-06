@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react"
 import ResizeObserver from "resize-observer-polyfill"
+import debounce from 'lodash.debounce'
 
 const ChartDimensionsContext = createContext()
 export const useChartDimensionsContext = () => useContext(ChartDimensionsContext)
@@ -31,7 +32,7 @@ export const useNewChartDimensions = passedSettings => {
       if (dimensions.width && dimensions.height) return [ref, dimensions]
 
       const element = ref.current
-      const resizeObserver = new ResizeObserver(entries => {
+      const handleResize = debounce(entries => {
           if (!Array.isArray(entries)) return
           if (!entries.length) return
 
@@ -46,13 +47,20 @@ export const useNewChartDimensions = passedSettings => {
               }, 300);
           }
 
-          if (width !== entry.contentRect.width) changeWidth(entry.contentRect.width)
-          if (height !== entry.contentRect.height) changeHeight(entry.contentRect.height)
-      })
+          requestAnimationFrame(() => {
+              if (width !== entry.contentRect.width) changeWidth(entry.contentRect.width)
+              if (height !== entry.contentRect.height) changeHeight(entry.contentRect.height)
+          })
+      }, 100) // Adjust the debounce delay as needed
+
+      const resizeObserver = new ResizeObserver(handleResize)
 
       resizeObserver.observe(element)
 
-      return () => resizeObserver.unobserve(element)
+      return () => {
+          resizeObserver.unobserve(element)
+          handleResize.cancel()
+      }
   }, [passedSettings, height, width, dimensions])
 
   const newSettings = combineChartDimensions({
